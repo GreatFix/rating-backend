@@ -8,17 +8,12 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-      datetime: {
-        type: DataTypes.DATE,
-        allowNull: false,
-      },
       content: {
         type: DataTypes.TEXT,
         allowNull: false,
       },
       images: {
         type: DataTypes.JSONB,
-        allowNull: false,
       },
       conclusion: {
         type: DataTypes.ENUM,
@@ -27,7 +22,13 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     {
-      timestamps: false,
+      indexes: [
+        {
+          name: "no-more-one-feedback",
+          unique: true,
+          fields: ["UserId", "TargetId"],
+        },
+      ],
     }
   );
 };
