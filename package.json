@@ -1,0 +1,30 @@
+{
+  "name": "rating-backend",
+  "version": "0.1.0",
+  "description": "rest-api express secuelize",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "body-parser": "1.19.0",
+    "cors": "^2.8.5",
+    "express": "4.17.1",
+    "luxon": "^1.26.0",
+    "pg": "^8.5.1",
+    "pg-hstore": "2.3.3",
+    "sequelize": "^6.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "1.18.4"
+  },
+  "keywords": [
+    "express",
+    "sequelize",
+    "node js",
+    "rest-api",
+    "js"
+  ],
+  "author": "",
+  "license": "ISC"
+}
