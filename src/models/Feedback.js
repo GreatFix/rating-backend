@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
         {
           name: "no-more-one-feedback",
           unique: true,
-          fields: ["UserId", "TargetId"],
+          fields: ["UserVkid", "TargetVkid"],
         },
       ],
     }

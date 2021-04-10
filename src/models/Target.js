@@ -2,16 +2,10 @@ module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     "Target",
     {
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-        allowNull: false,
-      },
       vkid: {
         type: DataTypes.STRING,
+        primaryKey: true,
         allowNull: false,
-        unique: true,
       },
       countPositiveFeedbacks: {
         type: DataTypes.INTEGER,
@@ -26,12 +20,6 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       timestamps: false,
-      indexes: [
-        {
-          unique: true,
-          fields: ["vkid"],
-        },
-      ],
     }
   );
 };

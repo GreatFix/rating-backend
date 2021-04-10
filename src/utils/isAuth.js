@@ -3,13 +3,13 @@ const { User } = require("../sequelize");
 async function isAuth(req, res, next) {
   try {
     const { userVKID } = req.body;
-    const user = await User.findOne({ where: { vkid: userVKID } });
+    const user = await User.findByPk(userVKID);
     if (user) {
       const verify = jwt.verify(
         getTokenFromHeader(req),
         process.env.SECRET_KEY
       );
-      verify._id === user.id
+      verify.vkid === user.vkid
         ? next()
         : res.status(401).end("Authorization failed");
     } else res.status(401).end("User not found");
