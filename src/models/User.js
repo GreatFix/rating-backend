@@ -2,8 +2,8 @@ module.exports = (sequelize, DataTypes) => {
   return sequelize.define(
     "User",
     {
-      vkid: {
-        type: DataTypes.STRING,
+      id: {
+        type: DataTypes.INTEGER,
         primaryKey: true,
         allowNull: false,
       },

@@ -5,7 +5,13 @@ const FeedbackModel = require("./models/Feedback");
 const CommentModel = require("./models/Comment");
 const CommentListModel = require("./models/CommentList");
 
-const sequelize = new Sequelize(process.env.DATABASE_URL);
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialectOptions: {
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  },
+});
 
 const User = UserModel(sequelize, Sequelize);
 const Target = TargetModel(sequelize, Sequelize);
