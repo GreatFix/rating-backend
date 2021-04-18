@@ -58,7 +58,7 @@ app.get("/target", async (req, res) => {
     const target = await Target.findByPk(targetID, {
       include: {
         model: Feedback,
-        include: { Comment },
+        include: Comment,
       },
     });
     target ? res.status(200).json({ target }) : res.status(404).send({});
