@@ -6,6 +6,12 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
+    greetingID: {
+      type: DataTypes.INTEGER,
+    },
+    greetingName: {
+      type: DataTypes.STRING,
+    },
     content: {
       type: DataTypes.TEXT,
       allowNull: false,

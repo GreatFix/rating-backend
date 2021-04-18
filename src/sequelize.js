@@ -28,11 +28,8 @@ Feedback.belongsTo(Target);
 User.hasMany(Comment, { onDelete: "cascade" });
 Comment.belongsTo(User);
 
-CommentList.hasOne(Feedback, { onDelete: "cascade" });
-Feedback.belongsTo(CommentList);
-
-CommentList.hasMany(Comment, { onDelete: "cascade" });
-Comment.belongsTo(CommentList);
+Feedback.hasMany(Comment, { onDelete: "cascade" });
+Comment.belongsTo(Feedback);
 
 sequelize
   .authenticate()

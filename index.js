@@ -52,7 +52,7 @@ app.get("/user", isAuth, async (req, res) => {
     const user = await User.findByPk(userID, {
       include: Feedback,
     });
-    user ? res.status(200).json({ user }) : res.sendStatus(404);
+    user ? res.status(200).json({ user }) : res.status(404).send({});
   } catch (err) {
     res.status(400).send(err.toString());
   }
@@ -67,7 +67,7 @@ app.get("/target", async (req, res) => {
         include: { model: CommentList, include: Comment },
       },
     });
-    target ? res.status(200).json({ target }) : res.sendStatus(404);
+    target ? res.status(200).json({ target }) : res.status(404).send({});
   } catch (err) {
     res.status(400).send(err.toString());
   }
@@ -112,7 +112,7 @@ app
           target.increment("countNegativeFeedbacks");
           user.increment("countNegativeFeedbacks");
         }
-        res.status(200).json(feedback);
+        res.status(200).json({ feedback });
       } else res.status(400).send("Ошибка при добавлении отзыва");
     } catch (err) {
       res.status(400).send(err.toString());
@@ -122,14 +122,30 @@ app
     try {
       const { content, images, conclusion, feedbackId } = req.body;
       const feedback = await Feedback.findByPk(feedbackId);
+      const user = await User.findByPk(feedback.UserId);
+      const target = await Target.findByPk(feedback.TargetId);
       if (feedback) {
+        if (feedback.conclusion !== conclusion && conclusion === "positive") {
+          target.increment("countPositiveFeedbacks");
+          user.increment("countPositiveFeedbacks");
+          target.decrement("countNegativeFeedbacks");
+          user.decrement("countNegativeFeedbacks");
+        } else if (
+          feedback.conclusion !== conclusion &&
+          conclusion === "negative"
+        ) {
+          target.decrement("countPositiveFeedbacks");
+          user.decrement("countPositiveFeedbacks");
+          target.increment("countNegativeFeedbacks");
+          user.increment("countNegativeFeedbacks");
+        }
         feedback.content = content;
         feedback.images = images;
         feedback.conclusion = conclusion;
-        feedback.save();
 
-        res.status(200).json(feedback);
-      } else res.status(401).end("Feedback not found");
+        feedback.save();
+        res.status(200).json({ feedback });
+      } else res.status(404).end("Feedback not found");
     } catch (err) {
       res.status(400).send(err.toString());
     }
@@ -138,11 +154,21 @@ app
     try {
       const { feedbackId } = req.body;
       const feedback = await Feedback.findByPk(feedbackId);
+      const user = await User.findByPk(feedback.UserId);
+      const target = await Target.findByPk(feedback.TargetId);
+
       if (feedback) {
+        if (feedback.conclusion === "positive") {
+          target.decrement("countPositiveFeedbacks");
+          user.decrement("countPositiveFeedbacks");
+        } else {
+          target.decrement("countNegativeFeedbacks");
+          user.decrement("countNegativeFeedbacks");
+        }
         feedback.destroy();
 
         res.status(200).send("Successful deleted");
-      } else res.status(401).end("Feedback not found");
+      } else res.status(404).end("Feedback not found");
     } catch (err) {
       res.status(400).send(err.toString());
     }
@@ -157,21 +183,16 @@ app
       const user = await User.findByPk(userID);
       const feedback = await Feedback.findByPk(feedbackId);
       if (feedback) {
-        const commentList =
-          (await CommentList.findByPk(feedback.CommentListId)) ??
-          (await feedback.createCommentList());
-
-        if (commentList) {
-          const comment = await commentList.createComment({
-            content,
-            images,
-            UserId: user.id,
-          });
-          if (comment) {
-            res.status(200).json(comment);
-          } else res.status(500).send("Ошибка при добавлении ответа на отзыв");
-        }
-      } else res.status(401).end("Feedback not found");
+        const comment = await feedback.createComment({
+          content,
+          images,
+          UserId: user.id,
+        });
+        user.increment("countComments");
+        if (comment) {
+          res.status(200).json({ comment });
+        } else res.status(500).send("Ошибка при добавлении ответа на отзыв");
+      } else res.status(404).end("Feedback not found");
     } catch (err) {
       res.status(400).send(err.toString());
     }
@@ -185,17 +206,21 @@ app
         comment.images = images;
         comment.save();
 
-        res.status(200).json(comment);
-      } else res.status(401).end("Comment not found");
+        res.status(200).json({ comment });
+      } else res.status(404).end("Comment not found");
     } catch (err) {
       res.status(400).send(err.toString());
     }
   })
   .delete(isAuth, async (req, res) => {
     try {
+      const { userID } = req.query;
       const { commentId } = req.body;
       const comment = await Comment.findByPk(commentId);
+      const user = await User.findByPk(userID);
+
       if (comment) {
+        user.decrement("countComments");
         comment.destroy();
 
         res.status(200).send("Successful deleted");
