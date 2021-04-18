@@ -2,13 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const app = express();
-const {
-  User,
-  Target,
-  Feedback,
-  Comment,
-  CommentList,
-} = require("./src/sequelize");
+const { User, Target, Feedback, Comment } = require("./src/sequelize");
 const cors = require("cors");
 const { isAuth } = require("./src/utils/isAuth");
 
@@ -64,7 +58,7 @@ app.get("/target", async (req, res) => {
     const target = await Target.findByPk(targetID, {
       include: {
         model: Feedback,
-        include: { model: CommentList, include: Comment },
+        include: { Comment },
       },
     });
     target ? res.status(200).json({ target }) : res.status(404).send({});
