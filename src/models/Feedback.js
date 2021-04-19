@@ -8,6 +8,9 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
+      albumId: {
+        type: DataTypes.INTEGER,
+      },
       content: {
         type: DataTypes.TEXT,
         allowNull: false,

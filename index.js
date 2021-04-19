@@ -8,7 +8,7 @@ const { User, Target, Feedback, Comment } = require("./src/sequelize");
 const cors = require("cors");
 const { isAuth } = require("./src/utils/isAuth");
 const { uploadImages } = require("./src/utils/uploadImages");
-
+const { checkImages } = require("./src/utils/checkImages");
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
@@ -130,9 +130,10 @@ app
           group_id: GROUP_ID_VK,
         });
 
-        const uploadedImages = await uploadImages(vk, images, album);
+        const uploadedImages = await uploadImages(vk, images, album?.id);
 
         feedback.images = uploadedImages;
+        feedback.albumId = album?.id;
         feedback.save();
 
         res.status(200).json({ feedback });
@@ -162,8 +163,20 @@ app
           target.increment("countNegativeFeedbacks");
           user.increment("countNegativeFeedbacks");
         }
+        const checkedImages = checkImages(comment.images, images);
+        for (let img of checkedImages.toDelete) {
+          await vk.post("photos.delete", {
+            owner_id: -GROUP_ID_VK,
+            photo_id: img?.id,
+          });
+        }
+        const uploadedImages = await uploadImages(
+          vk,
+          checkedImages.newImagesWithoutOld,
+          feedback.albumId
+        );
         feedback.content = content;
-        feedback.images = images;
+        feedback.images = [...checkedImages.alreadyHave, ...uploadedImages];
         feedback.conclusion = conclusion;
 
         feedback.save();
@@ -181,10 +194,10 @@ app
       const target = await Target.findByPk(feedback.TargetId);
 
       if (feedback) {
-        feedback?.images?.[0] &&
+        feedback?.albumId &&
           (await vk.post("photos.deleteAlbum", {
             group_id: GROUP_ID_VK,
-            album_id: feedback.images[0]?.album_id,
+            album_id: feedback?.albumId,
           }));
         if (feedback.conclusion === "positive") {
           target.decrement("countPositiveFeedbacks");
@@ -207,15 +220,26 @@ app
   .post(isAuth, async (req, res) => {
     try {
       const { userID } = req.query;
-      const { content, images, feedbackId } = req.body;
+      const {
+        content,
+        images,
+        feedbackId,
+        greetingName,
+        greetingID,
+      } = req.body;
       const user = await User.findByPk(userID);
       const feedback = await Feedback.findByPk(feedbackId);
       if (feedback) {
         const comment = await feedback.createComment({
           content,
-          images,
+          greetingName,
+          greetingID,
           UserId: user.id,
         });
+        const uploadedImages = await uploadImages(vk, images, feedback.albumId);
+
+        comment.images = uploadedImages;
+        comment.save();
         user.increment("countComments");
         if (comment) {
           res.status(200).json({ comment });
@@ -227,11 +251,26 @@ app
   })
   .put(isAuth, async (req, res) => {
     try {
-      const { content, images, commentId } = req.body;
+      const { content, images, commentId, greetingName, greetingID } = req.body;
       const comment = await Comment.findByPk(commentId);
+      const feedback = await Feedback.findByPk(comment.FeedbackId);
       if (comment) {
+        const checkedImages = checkImages(comment.images, images);
+        for (let img of checkedImages.toDelete) {
+          await vk.post("photos.delete", {
+            owner_id: -GROUP_ID_VK,
+            photo_id: img?.id,
+          });
+        }
+        const uploadedImages = await uploadImages(
+          vk,
+          checkedImages.newImagesWithoutOld,
+          feedback.albumId
+        );
         comment.content = content;
-        comment.images = images;
+        comment.images = [...checkedImages.alreadyHave, ...uploadedImages];
+        comment.greetingName = greetingName;
+        comment.greetingID = greetingID;
         comment.save();
 
         res.status(200).json({ comment });
@@ -248,6 +287,12 @@ app
       const user = await User.findByPk(userID);
 
       if (comment) {
+        for (let img of comment?.images) {
+          await vk.post("photos.delete", {
+            owner_id: -GROUP_ID_VK,
+            photo_id: img?.id,
+          });
+        }
         user.decrement("countComments");
         comment.destroy();
 

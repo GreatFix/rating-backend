@@ -3,7 +3,7 @@ const fs = require("fs");
 
 const GROUP_ID_VK = process.env.GROUP_ID_VK;
 const ALBUM_ID_VK = process.env.ALBUM_ID_VK;
-async function uploadImages(vk, images, album) {
+async function uploadImages(vk, images, albumId) {
   let newImages = [];
   for (let image of images) {
     const indexChar = image.indexOf(";");
@@ -21,12 +21,12 @@ async function uploadImages(vk, images, album) {
       getUrlMethod: "photos.getUploadServer",
       getUrlParams: {
         group_id: GROUP_ID_VK,
-        album_id: album.id ?? ALBUM_ID_VK,
+        album_id: albumId ?? ALBUM_ID_VK,
       },
       saveMethod: "photos.save",
       saveParams: {
         group_id: GROUP_ID_VK,
-        album_id: album.id ?? ALBUM_ID_VK,
+        album_id: albumId ?? ALBUM_ID_VK,
       },
       file: `./temp.${format}`,
     });
