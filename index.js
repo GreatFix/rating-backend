@@ -1,13 +1,33 @@
 const express = require("express");
 const crypto = require("crypto");
+const easyvk = require("easyvk");
+const path = require("path");
 const jwt = require("jsonwebtoken");
 const app = express();
 const { User, Target, Feedback, Comment } = require("./src/sequelize");
 const cors = require("cors");
 const { isAuth } = require("./src/utils/isAuth");
+const { uploadImages } = require("./src/utils/uploadImages");
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+
+const GROUP_ID_VK = process.env.GROUP_ID_VK;
+const ALBUM_ID_VK = process.env.ALBUM_ID_VK;
+const USERNAME_VK = process.env.USERNAME_VK;
+const PASSWORD_VK = process.env.PASSWORD_VK;
+const VERSION_API_VK = process.env.VERSION_API_VK;
+
+let vk;
+easyvk({
+  username: USERNAME_VK,
+  password: PASSWORD_VK,
+  v: VERSION_API_VK,
+  utils: { uploader: true },
+  sessionFile: path.join(__dirname, ".my-session"),
+})
+  .then((res) => (vk = res))
+  .catch((err) => console.log(err));
 
 app.get("/", (req, res) => {
   res.status(200).send("Launched");
@@ -17,7 +37,7 @@ app.post("/auth", async (req, res) => {
   try {
     const { stringParams, sign, userID } = req.body;
     const paramsHash = crypto
-      .createHmac("sha256", process.env.SECRET_KEY)
+      .createHmac("sha256", "WeABMIrRFPOlg38Kvthr")
       .update(stringParams)
       .digest()
       .toString("base64")
@@ -31,7 +51,7 @@ app.post("/auth", async (req, res) => {
       });
 
       if (user) {
-        const token = jwt.sign({ id: userID }, process.env.SECRET_KEY);
+        const token = jwt.sign({ id: userID }, "WeABMIrRFPOlg38Kvthr");
         res.status(200).json({ token });
       } else res.status(401).send("Error in user definition");
     } else res.status(401).send("Invalid sign");
@@ -86,14 +106,13 @@ app
   .post(isAuth, async (req, res) => {
     try {
       const { userID } = req.query;
-      const { content, images, conclusion, targetID } = req.body;
+      let { content, images, conclusion, targetID } = req.body;
       const [target, created] = await Target.findOrCreate({
         where: { id: targetID },
       });
       const user = await User.findByPk(userID);
       const feedback = await user.createFeedback({
         content,
-        images,
         conclusion,
         TargetId: target.id,
       });
@@ -106,6 +125,16 @@ app
           target.increment("countNegativeFeedbacks");
           user.increment("countNegativeFeedbacks");
         }
+        const album = await vk.post("photos.createAlbum", {
+          title: `${target.id}_${feedback.id}`,
+          group_id: GROUP_ID_VK,
+        });
+
+        const uploadedImages = await uploadImages(vk, images, album);
+
+        feedback.images = uploadedImages;
+        feedback.save();
+
         res.status(200).json({ feedback });
       } else res.status(400).send("Ошибка при добавлении отзыва");
     } catch (err) {
@@ -152,6 +181,11 @@ app
       const target = await Target.findByPk(feedback.TargetId);
 
       if (feedback) {
+        feedback?.images?.[0] &&
+          (await vk.post("photos.deleteAlbum", {
+            group_id: GROUP_ID_VK,
+            album_id: feedback.images[0]?.album_id,
+          }));
         if (feedback.conclusion === "positive") {
           target.decrement("countPositiveFeedbacks");
           user.decrement("countPositiveFeedbacks");

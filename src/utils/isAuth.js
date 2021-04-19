@@ -7,7 +7,7 @@ async function isAuth(req, res, next) {
     if (user) {
       const verify = jwt.verify(
         getTokenFromHeader(req),
-        process.env.SECRET_KEY
+        "WeABMIrRFPOlg38Kvthr"
       );
       Number(verify.id) === user.id
         ? next()
