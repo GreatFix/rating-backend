@@ -163,7 +163,7 @@ app
           target.increment("countNegativeFeedbacks");
           user.increment("countNegativeFeedbacks");
         }
-        const checkedImages = checkImages(comment.images, images);
+        const checkedImages = checkImages(feedback.images, images);
         for (let img of checkedImages.toDelete) {
           await vk.post("photos.delete", {
             owner_id: -GROUP_ID_VK,
