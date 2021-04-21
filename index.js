@@ -65,6 +65,7 @@ app.get("/user", isAuth, async (req, res) => {
     const { userID } = req.query;
     const user = await User.findByPk(userID, {
       include: Feedback,
+      order: [[Feedback, "updated_at", "asc"]],
     });
     user ? res.status(200).json({ user }) : res.status(404).send({});
   } catch (err) {
@@ -80,6 +81,10 @@ app.get("/target", async (req, res) => {
         model: Feedback,
         include: Comment,
       },
+      order: [
+        [Feedback, "updated_at", "asc"],
+        [Feedback, Comment, "updated_at", "asc"],
+      ],
     });
     target ? res.status(200).json({ target }) : res.status(404).send({});
   } catch (err) {
