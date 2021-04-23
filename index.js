@@ -116,7 +116,7 @@ app.get("/targets", async (req, res) => {
 
 app.get("/recent/feedbacks", async (req, res) => {
   try {
-    const { limit, offset } = req.body;
+    const { limit = 50, offset = 0 } = req.body;
     const feedbacks = await Feedback.findAll({
       limit,
       offset,
@@ -318,7 +318,6 @@ app
   .put(isAuth, isAuthorComment, async (req, res) => {
     try {
       const { content, images, greetingName, greetingID, comment } = req.body;
-      const feedback = await Feedback.findByPk(comment.FeedbackId);
       const feedback = await Feedback.findByPk(comment.FeedbackId);
       if (comment) {
         const checkedImages = checkImages(comment.images, images);
