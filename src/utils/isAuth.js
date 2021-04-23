@@ -9,9 +9,12 @@ async function isAuth(req, res, next) {
         getTokenFromHeader(req),
         "WeABMIrRFPOlg38Kvthr"
       );
-      Number(verify.id) === user.id
-        ? next()
-        : res.status(401).end("Authorization failed");
+      if (Number(verify.id) === user.id) {
+        req.body.user = user;
+        next();
+      } else {
+        res.status(401).end("Authorization failed");
+      }
     } else res.status(401).end("User not found");
   } catch (err) {
     res.status(400).send(err.toString());

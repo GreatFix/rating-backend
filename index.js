@@ -7,6 +7,8 @@ const app = express();
 const { User, Target, Feedback, Comment } = require("./src/sequelize");
 const cors = require("cors");
 const { isAuth } = require("./src/utils/isAuth");
+const { isAuthorFeedback } = require("./src/utils/isAuthorFeedback");
+const { isAuthorComment } = require("./src/utils/isAuthorComment");
 const { uploadImages } = require("./src/utils/uploadImages");
 const { checkImages } = require("./src/utils/checkImages");
 app.use(cors());
@@ -52,7 +54,7 @@ app.post("/auth", async (req, res) => {
 
       if (user) {
         const token = jwt.sign({ id: userID }, "WeABMIrRFPOlg38Kvthr");
-        res.status(200).json({ token });
+        res.status(200).json(token);
       } else res.status(401).send("Error in user definition");
     } else res.status(401).send("Invalid sign");
   } catch (err) {
@@ -64,10 +66,16 @@ app.get("/user", isAuth, async (req, res) => {
   try {
     const { userID } = req.query;
     const user = await User.findByPk(userID, {
-      include: Feedback,
-      order: [[Feedback, "createdAt", "asc"]],
+      include: {
+        model: Feedback,
+        include: Comment,
+      },
+      order: [
+        [Feedback, "createdAt", "asc"],
+        [Feedback, Comment, "createdAt", "asc"],
+      ],
     });
-    user ? res.status(200).json({ user }) : res.status(404).send({});
+    user ? res.status(200).json(user) : res.status(404).send({});
   } catch (err) {
     res.status(400).send(err.toString());
   }
@@ -86,7 +94,7 @@ app.get("/target", async (req, res) => {
         [Feedback, Comment, "createdAt", "asc"],
       ],
     });
-    target ? res.status(200).json({ target }) : res.status(404).send({});
+    target ? res.status(200).json(target) : res.status(404).send({});
   } catch (err) {
     res.status(400).send(err.toString());
   }
@@ -100,7 +108,64 @@ app.get("/targets", async (req, res) => {
         id: arrayTargetIds,
       },
     });
-    targets ? res.status(200).json({ targets }) : res.status(404).send([]);
+    targets ? res.status(200).json(targets) : res.status(404).send([]);
+  } catch (err) {
+    res.status(400).send(err.toString());
+  }
+});
+
+app.get("/recent/feedbacks", async (req, res) => {
+  try {
+    const { limit, offset } = req.body;
+    const feedbacks = await Feedback.findAll({
+      limit,
+      offset,
+      order: [["createdAt", "asc"]],
+    });
+    feedbacks ? res.status(200).json(feedbacks) : res.status(404).send([]);
+  } catch (err) {
+    res.status(400).send(err.toString());
+  }
+});
+
+app.get("/recent/comments", async (req, res) => {
+  try {
+    const { limit, offset, feedbackId = undefined } = req.body;
+    const comments = await Comment.findAll({
+      where: {
+        feedbackId,
+      },
+      limit,
+      offset,
+      order: [["createdAt", "asc"]],
+    });
+    comments ? res.status(200).json(comments) : res.status(404).send([]);
+  } catch (err) {
+    res.status(400).send(err.toString());
+  }
+});
+
+app.get("/targets/top/:count", async (req, res) => {
+  try {
+    const { count = 50 } = req.params;
+    const targets = await Target.findAll({
+      limit: count,
+      order: [["countPositiveFeedbacks - countNegativeFeedbacks", "desc"]],
+    });
+    targets ? res.status(200).json(targets) : res.status(404).send([]);
+  } catch (err) {
+    res.status(400).send(err.toString());
+  }
+});
+
+app.get("/users/top/:count", async (req, res) => {
+  try {
+    const { count = 50 } = req.params;
+    const users = await User.findAll({
+      limit: count,
+      order: [["countPositiveFeedbacks - countNegativeFeedbacks", "desc"]],
+    });
+    users ? res.status(200).json(users) : res.status(404).send([]);
   } catch (err) {
     res.status(400).send(err.toString());
   }
@@ -141,17 +206,15 @@ app
         feedback.albumId = album?.id;
         feedback.save();
 
-        res.status(200).json({ feedback });
+        res.status(200).json(feedback);
       } else res.status(400).send("Ошибка при добавлении отзыва");
     } catch (err) {
       res.status(400).send(err.toString());
     }
   })
-  .put(isAuth, async (req, res) => {
+  .put(isAuth, isAuthorFeedback, async (req, res) => {
     try {
-      const { content, images, conclusion, feedbackId } = req.body;
-      const feedback = await Feedback.findByPk(feedbackId);
-      const user = await User.findByPk(feedback.UserId);
+      const { content, images, conclusion, feedback, user } = req.body;
       const target = await Target.findByPk(feedback.TargetId);
       if (feedback) {
         if (feedback.conclusion !== conclusion && conclusion === "positive") {
@@ -185,17 +248,15 @@ app
         feedback.conclusion = conclusion;
 
         feedback.save();
-        res.status(200).json({ feedback });
+        res.status(200).json(feedback);
       } else res.status(404).end("Feedback not found");
     } catch (err) {
       res.status(400).send(err.toString());
     }
   })
-  .delete(isAuth, async (req, res) => {
+  .delete(isAuth, isAuthorFeedback, async (req, res) => {
     try {
-      const { feedbackId } = req.body;
-      const feedback = await Feedback.findByPk(feedbackId);
-      const user = await User.findByPk(feedback.UserId);
+      const { feedback, user } = req.body;
       const target = await Target.findByPk(feedback.TargetId);
 
       if (feedback) {
@@ -247,17 +308,17 @@ app
         comment.save();
         user.increment("countComments");
         if (comment) {
-          res.status(200).json({ comment });
+          res.status(200).json(comment);
         } else res.status(500).send("Ошибка при добавлении ответа на отзыв");
       } else res.status(404).end("Feedback not found");
     } catch (err) {
       res.status(400).send(err.toString());
     }
   })
-  .put(isAuth, async (req, res) => {
+  .put(isAuth, isAuthorComment, async (req, res) => {
     try {
-      const { content, images, commentId, greetingName, greetingID } = req.body;
-      const comment = await Comment.findByPk(commentId);
+      const { content, images, greetingName, greetingID, comment } = req.body;
+      const feedback = await Feedback.findByPk(comment.FeedbackId);
       const feedback = await Feedback.findByPk(comment.FeedbackId);
       if (comment) {
         const checkedImages = checkImages(comment.images, images);
@@ -278,18 +339,15 @@ app
         comment.greetingID = greetingID;
         comment.save();
 
-        res.status(200).json({ comment });
+        res.status(200).json(comment);
       } else res.status(404).end("Comment not found");
     } catch (err) {
       res.status(400).send(err.toString());
     }
   })
-  .delete(isAuth, async (req, res) => {
+  .delete(isAuth, isAuthorComment, async (req, res) => {
     try {
-      const { userID } = req.query;
-      const { commentId } = req.body;
-      const comment = await Comment.findByPk(commentId);
-      const user = await User.findByPk(userID);
+      const { comment, user } = req.body;
 
       if (comment) {
         for (let img of comment?.images) {
