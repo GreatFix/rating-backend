@@ -1,10 +1,17 @@
+require("dotenv").config();
 const express = require("express");
 const crypto = require("crypto");
 const easyvk = require("easyvk");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 const app = express();
-const { User, Target, Feedback, Comment } = require("./src/sequelize");
+const {
+  User,
+  Target,
+  Feedback,
+  Comment,
+  sequelize,
+} = require("./src/sequelize");
 const cors = require("cors");
 const { isAuth } = require("./src/utils/isAuth");
 const { isAuthorFeedback } = require("./src/utils/isAuthorFeedback");
@@ -116,7 +123,7 @@ app.get("/targets", async (req, res) => {
 
 app.get("/recent/feedbacks", async (req, res) => {
   try {
-    const { limit = 50, offset = 0 } = req.body;
+    const { limit = 50, offset = 0 } = req.query;
     const feedbacks = await Feedback.findAll({
       limit,
       offset,
@@ -130,11 +137,8 @@ app.get("/recent/feedbacks", async (req, res) => {
 
 app.get("/recent/comments", async (req, res) => {
   try {
-    const { limit, offset, feedbackId = undefined } = req.body;
+    const { limit, offset } = req.query;
     const comments = await Comment.findAll({
-      where: {
-        feedbackId,
-      },
       limit,
       offset,
       order: [["createdAt", "asc"]],
@@ -148,10 +152,12 @@ app.get("/recent/comments", async (req, res) => {
 app.get("/targets/top/:count", async (req, res) => {
   try {
     const { count = 50 } = req.params;
-    const targets = await Target.findAll({
-      limit: count,
-      order: [["countPositiveFeedbacks - countNegativeFeedbacks", "desc"]],
-    });
+    const targets = await sequelize.query(
+      `SELECT *, "countPositiveFeedbacks" - "countNegativeFeedbacks" as "rating" FROM "Targets" Order by "rating" desc LIMIT ${parseInt(
+        count
+      )}`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
     targets ? res.status(200).json(targets) : res.status(404).send([]);
   } catch (err) {
     res.status(400).send(err.toString());
@@ -161,10 +167,13 @@ app.get("/targets/top/:count", async (req, res) => {
 app.get("/users/top/:count", async (req, res) => {
   try {
     const { count = 50 } = req.params;
-    const users = await User.findAll({
-      limit: count,
-      order: [["countPositiveFeedbacks - countNegativeFeedbacks", "desc"]],
-    });
+    const users = await sequelize.query(
+      `SELECT *, "countPositiveFeedbacks" + "countNegativeFeedbacks" as "activity" FROM "Users" Order by "activity" desc LIMIT ${parseInt(
+        count
+      )}`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+
     users ? res.status(200).json(users) : res.status(404).send([]);
   } catch (err) {
     res.status(400).send(err.toString());
@@ -175,12 +184,18 @@ app
   .route("/feedback")
   .post(isAuth, async (req, res) => {
     try {
-      const { userID } = req.query;
-      let { content, images, conclusion, targetID } = req.body;
+      let {
+        content,
+        images,
+        conclusion,
+        targetID,
+        targetType,
+        user,
+      } = req.body;
       const [target, created] = await Target.findOrCreate({
         where: { id: targetID },
+        defaults: { id: targetID, type: targetType },
       });
-      const user = await User.findByPk(userID);
       const feedback = await user.createFeedback({
         content,
         conclusion,
@@ -285,15 +300,14 @@ app
   .route("/comment")
   .post(isAuth, async (req, res) => {
     try {
-      const { userID } = req.query;
       const {
         content,
         images,
         feedbackId,
         greetingName,
         greetingID,
+        user,
       } = req.body;
-      const user = await User.findByPk(userID);
       const feedback = await Feedback.findByPk(feedbackId);
       if (feedback) {
         const comment = await feedback.createComment({

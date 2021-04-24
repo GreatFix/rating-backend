@@ -39,4 +39,4 @@ sequelize
   .then(() => console.log("Synchronized"))
   .catch((err) => console.error("Synchronization error:" + err));
 
-module.exports = { User, Target, Feedback, Comment };
+module.exports = { User, Target, Feedback, Comment, sequelize };

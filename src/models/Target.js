@@ -7,6 +7,10 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
+      type: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       countPositiveFeedbacks: {
         type: DataTypes.INTEGER,
         allowNull: false,
