@@ -73,10 +73,15 @@ app.get("/user", isAuth, async (req, res) => {
   try {
     const { userID } = req.query;
     const user = await User.findByPk(userID, {
-      include: {
-        model: Feedback,
-        include: Comment,
-      },
+      include: [
+        {
+          model: Feedback,
+          include: Comment,
+        },
+        {
+          model: Comment,
+        },
+      ],
       order: [
         [Feedback, "createdAt", "asc"],
         [Feedback, Comment, "createdAt", "asc"],
@@ -320,7 +325,6 @@ app
 
         comment.images = uploadedImages;
         comment.save();
-        user.increment("countComments");
         if (comment) {
           res.status(200).json(comment);
         } else res.status(500).send("Ошибка при добавлении ответа на отзыв");
@@ -369,7 +373,6 @@ app
             photo_id: img?.id,
           });
         }
-        user.decrement("countComments");
         comment.destroy();
 
         res.status(200).send("Successful deleted");
