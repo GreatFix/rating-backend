@@ -187,6 +187,17 @@ app.get("/users/top/:count", async (req, res) => {
 
 app
   .route("/feedback")
+  .get(async (req, res) => {
+    try {
+      const { feedbackID } = req.query;
+      const feedback = await Feedback.findByPk(feedbackID, {
+        include: Comment,
+      });
+      feedback ? res.status(200).json(feedback) : res.status(404).send({});
+    } catch (err) {
+      res.status(400).send(err.toString());
+    }
+  })
   .post(isAuth, async (req, res) => {
     try {
       let {
@@ -303,6 +314,15 @@ app
 
 app
   .route("/comment")
+  .get(async (req, res) => {
+    try {
+      const { commentID } = req.query;
+      const comment = await Comment.findByPk(commentID);
+      comment ? res.status(200).json(comment) : res.status(404).send({});
+    } catch (err) {
+      res.status(400).send(err.toString());
+    }
+  })
   .post(isAuth, async (req, res) => {
     try {
       const {
