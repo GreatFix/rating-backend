@@ -1,6 +1,6 @@
-#Documentation
+# Documentation
 
-##Install
+## Install
 
 ```bash
 git clone git:github.com/GreatFix/rating-backend.git
@@ -10,19 +10,19 @@ git clone git:github.com/GreatFix/rating-backend.git
 npm install
 ```
 
-##Stack
+## Stack
 
 - Nodejs
 - Express
 - Sequelize
 - Postgresql
 
-##Used
+## Used
 
 - **easyvk** for send request to VK API
 - **jwt** and **crypto** for authentication user
 
-##Routes
+## Routes
 
 - GET "auth"
 - GET "/user"
@@ -41,7 +41,7 @@ npm install
 - DELETE "/feedback"
 - DELETE "/comment"
 
-##Models
+## Models
 
 - User
 
