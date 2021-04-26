@@ -45,28 +45,29 @@ npm install
 
 - User
 
-  > id
-  > countPositiveFeedbacks
-  > countNegativeFeedbacks
+  - id
+  - countPositiveFeedbacks
+  - countNegativeFeedbacks
 
 - Target
 
-  > id
-  > type
-  > countPositiveFeedbacks
-  > countNegativeFeedbacks
+  - id
+  - type
+  - countPositiveFeedbacks
+  - countNegativeFeedbacks
 
 - Feedback
 
-  > id
-  > content
-  > conclusion
-  > images
-  > albumId
+  - id
+  - content
+  - conclusion
+  - images
+  - albumId
 
 - Comment
-  > id
-  > content
-  > images
-  > greetingID
-  > greetingName
+
+  - id
+  - content
+  - images
+  - greetingID
+  - greetingName
