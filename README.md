@@ -71,3 +71,5 @@ npm install
   - images
   - greetingID
   - greetingName
+
+#### Сервер на [Heroku](https://rating-backend.herokuapp.com)
